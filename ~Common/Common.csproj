@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	
+	<PropertyGroup>
+		<CommonDir>$(MSBuildThisFileDirectory)\</CommonDir>
+		<CommonRoot>$(CommonDir)\..\</CommonRoot>
+		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+	</PropertyGroup>
+		
+	<Import Project="$(CommonDir)\Common.props" />
+	<Import Project="$(CommonRoot)\Common.props" Condition="Exists('$(CommonRoot)Common.props')" />
+		
+	<PropertyGroup>
+		<CommonObj Condition=" '$(CommonObj)' == '' ">$(CommonRoot)\obj\</CommonObj>
+		<CommonBin Condition=" '$(CommonBin)' == '' ">$(CommonRoot)\bin\</CommonBin>
+		<OutputPath>$(CommonBin)\$(Configuration)\</OutputPath>
+		<IntermediateOutputPath>$(CommonObj)\$(Configuration)\$(MSBuildProjectName)_$(Platform)\</IntermediateOutputPath>
+	</PropertyGroup>
+	
+	<Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+	<Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="Exists('$(MSBuildToolsPath)\Microsoft.CSharp.targets')" />
+	<Import Project="$(CommonDir)\NuGet.targets" Condition="Exists('$(CommonDir)\NuGet.targets')" />
+	<Import Project="$(CommonDir)\Common.targets" Condition="Exists('$(CommonDir)\Common.targets')" />
+	<Import Project="$(CommonRoot)\Common.targets" Condition="Exists('$(CommonRoot)\Common.targets')" />
+	
+</Project>

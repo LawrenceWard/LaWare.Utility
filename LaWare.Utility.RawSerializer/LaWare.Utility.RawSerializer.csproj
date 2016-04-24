@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{080C3294-4FC0-4557-B62B-065436F1A3E8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <Import Project="..\~Common\Common.csproj" />
+  <ItemGroup>
+    <ProjectReference Include="..\LaWare.Utility.AxSerializer\LaWare.Utility.AxSerializer.csproj">
+      <Project>{1B21CEE8-FC5F-4647-B851-B9ABE7F92ABB}</Project>
+      <Name>LaWare.Utility.AxSerializer</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RawSerializer.cs" />
+  </ItemGroup>
+</Project>

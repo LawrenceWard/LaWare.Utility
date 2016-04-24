@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	
+    <UsingTask TaskName="RegexUpdateFile" AssemblyFile="$(CommonDir)\BuildTasks\BuildTasks.dll" />
+
+	<Target Name="FixAssemblyInfo">
+
+		<Copy SourceFiles="$(CommonDir)\AssemblyInfo.cs" DestinationFiles="$(IntermediateOutputPath)AssemblyInfo.cs">
+			<Output TaskParameter="DestinationFiles" ItemName="AssemblyInfo"/>
+		</Copy>
+
+		<Message Text="Replacing Assembly Title" />
+		<RegexUpdateFile Files="@(AssemblyInfo)"
+					Regex="AssemblyTitle\(&quot;(\.*)&quot;\)"
+					ReplacementText="AssemblyTitle(&quot;$(MSBuildProjectName)&quot;)"
+                />
+
+		<Message Text="Replacing Assembly Description" />
+		<RegexUpdateFile Files="@(AssemblyInfo)"
+					Regex="AssemblyDescription\(&quot;(\.*)&quot;\)"
+					ReplacementText="AssemblyDescription(&quot;$(MSBuildProjectName)&quot;)"
+                />
+
+		<ItemGroup>
+			<Compile Include="@(AssemblyInfo)" />
+		</ItemGroup>
+
+	</Target>
+
+	<PropertyGroup>
+		<CompileDependsOn>
+			FixAssemblyInfo;
+			$(CompileDependsOn);
+		</CompileDependsOn>
+	</PropertyGroup>
+
+</Project>
