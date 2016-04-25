@@ -1,16 +1,11 @@
-using LaWare.Utility.AxSerializer;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
-using System.Runtime.Versioning;
-using System.Security;
-using System.Security.Permissions;
 using System.Text;
+using LaWare.Utility.AxSerializer;
+
+// ReSharper disable InconsistentNaming
 
 namespace LaWare.Utility.RawSerializer
 {
@@ -40,794 +35,639 @@ namespace LaWare.Utility.RawSerializer
 		UInt16 = 20,
 		UInt32 = 21,
 		UInt64 = 22,
-		TypeMask = 31,
-		SizeMask = 224,
+		TypeMask = 0x1f,
+		SizeMask = 0xe0,
 		SizeFull = 0,
-		Size1 = 32,
-		Size2 = 64,
-		Size3 = 96,
-		Size4 = 128,
-		Size5 = 160,
-		Size6 = 192,
-		Size7 = 224
+		Size1 = 0x20,
+		Size2 = 0x40,
+		Size3 = 0x60,
+		Size4 = 0x80,
+		Size5 = 0xa0,
+		Size6 = 0xc0,
+		Size7 = 0xe0
 	}
 	public class RawSerializer : IAxSerializer
 	{
 		private const int Int24_MaxValue = 8388352;
-
 		private const int Int24_MinValue = -8388608;
-
 		private const long Int40_MaxValue = 549755813632L;
-
 		private const long Int40_MinValue = -549755813888L;
-
 		private const long Int48_MaxValue = 140737488289792L;
-
 		private const long Int48_MinValue = -140737488355328L;
-
 		private const long Int56_MaxValue = 36028797002186752L;
-
 		private const long Int56_MinValue = -36028797018963968L;
-
 		private const uint UInt24_MaxValue = 16776960u;
-
 		private const ulong UInt40_MaxValue = 1099511627520uL;
-
 		private const ulong UInt48_MaxValue = 281474976645120uL;
-
 		private const ulong UInt56_MaxValue = 72057594021150720uL;
 
 		private readonly List<byte> data = new List<byte>();
 
 		public byte[] GetBytes()
 		{
-			return this.data.ToArray();
+			return data.ToArray();
 		}
 
 		private void Type(RawHeader type)
 		{
-			this.data.Add((byte)type);
+			data.Add((byte)type);
 		}
 
 		public void WriteNull()
 		{
-			this.Type(RawHeader.Null);
+			Type(RawHeader.Null);
 		}
 
 		public void WriteOpenObject()
 		{
-			this.Type(RawHeader.OpenObject);
+			Type(RawHeader.OpenObject);
 		}
 
 		public void WriteCloseObject()
 		{
-			this.Type(RawHeader.CloseObject);
+			Type(RawHeader.CloseObject);
 		}
 
 		public void WriteOpenArray()
 		{
-			this.Type(RawHeader.OpenArray);
+			Type(RawHeader.OpenArray);
 		}
 
 		public void WriteCloseArray()
 		{
-			this.Type(RawHeader.CloseArray);
+			Type(RawHeader.CloseArray);
 		}
 
 		private unsafe void WriteRawBytes(void* p, int count)
 		{
-			for (int i = 0; i < count; i++)
+			for (var i = 0; i < count; i++)
 			{
-				this.data.Add(((byte*)p)[i]);
+				data.Add(((byte*)p)[i]);
 			}
 		}
 
 		private unsafe void WriteShortI16(short source, RawHeader type)
 		{
-			bool flag = source <= 127 && source >= -128;
-			if (flag)
+			if (source <= 127 && source >= -128)
 			{
-				this.Type(type | RawHeader.Size1);
-				this.WriteRawBytes((void*)(&source), 1);
+				Type(type | RawHeader.Size1);
+				WriteRawBytes(&source, 1);
 			}
 			else
 			{
-				this.Type(type);
-				this.WriteRawBytes((void*)(&source), 2);
+				Type(type);
+				WriteRawBytes(&source, 2);
 			}
 		}
 
 		private unsafe void WriteShortU16(ushort source, RawHeader type)
 		{
-			bool flag = source <= 255;
-			if (flag)
+			if (source <= 255)
 			{
-				this.Type(type | RawHeader.Size1);
-				this.WriteRawBytes((void*)(&source), 1);
+				Type(type | RawHeader.Size1);
+				WriteRawBytes(&source, 1);
 			}
 			else
 			{
-				this.Type(type);
-				this.WriteRawBytes((void*)(&source), 2);
+				Type(type);
+				WriteRawBytes(&source, 2);
 			}
 		}
 
 		private unsafe void WriteShortI32(int source, RawHeader type)
 		{
-			bool flag = source <= 127 && source >= -128;
-			if (flag)
+			if (source <= 127 && source >= -128)
 			{
-				this.Type(type | RawHeader.Size1);
-				this.WriteRawBytes((void*)(&source), 1);
+				Type(type | RawHeader.Size1);
+				WriteRawBytes(&source, 1);
+			}
+			else if (source <= 32767 && source >= -32768)
+			{
+				Type(type | RawHeader.Size2);
+				WriteRawBytes(&source, 2);
+			}
+			else if (source <= 8388352 && source >= -8388608)
+			{
+				Type(type | RawHeader.Size3);
+				WriteRawBytes(&source, 3);
 			}
 			else
 			{
-				bool flag2 = source <= 32767 && source >= -32768;
-				if (flag2)
-				{
-					this.Type(type | RawHeader.Size2);
-					this.WriteRawBytes((void*)(&source), 2);
-				}
-				else
-				{
-					bool flag3 = source <= 8388352 && source >= -8388608;
-					if (flag3)
-					{
-						this.Type(type | RawHeader.Size3);
-						this.WriteRawBytes((void*)(&source), 3);
-					}
-					else
-					{
-						this.Type(type);
-						this.WriteRawBytes((void*)(&source), 4);
-					}
-				}
+				Type(type);
+				WriteRawBytes(&source, 4);
 			}
 		}
 
 		private unsafe void WriteShortU32(uint source, RawHeader type)
 		{
-			bool flag = source <= 255u;
-			if (flag)
+			if (source <= 255u)
 			{
-				this.Type(type | RawHeader.Size1);
-				this.WriteRawBytes((void*)(&source), 1);
+				Type(type | RawHeader.Size1);
+				WriteRawBytes(&source, 1);
+			}
+			else if (source <= 65535u)
+			{
+				Type(type | RawHeader.Size2);
+				WriteRawBytes(&source, 2);
+			}
+			else if (source <= 16776960u)
+			{
+				Type(type | RawHeader.Size3);
+				WriteRawBytes(&source, 3);
 			}
 			else
 			{
-				bool flag2 = source <= 65535u;
-				if (flag2)
-				{
-					this.Type(type | RawHeader.Size2);
-					this.WriteRawBytes((void*)(&source), 2);
-				}
-				else
-				{
-					bool flag3 = source <= 16776960u;
-					if (flag3)
-					{
-						this.Type(type | RawHeader.Size3);
-						this.WriteRawBytes((void*)(&source), 3);
-					}
-					else
-					{
-						this.Type(type);
-						this.WriteRawBytes((void*)(&source), 4);
-					}
-				}
+				Type(type);
+				WriteRawBytes(&source, 4);
 			}
 		}
 
 		private unsafe void WriteShortI64(long source, RawHeader type)
 		{
-			bool flag = source <= 127L && source >= -128L;
-			if (flag)
+			if (source <= 127L && source >= -128L)
 			{
-				this.Type(type | RawHeader.Size1);
-				this.WriteRawBytes((void*)(&source), 1);
+				Type(type | RawHeader.Size1);
+				WriteRawBytes(&source, 1);
+			}
+			else if (source <= 32767L && source >= -32768L)
+			{
+				Type(type | RawHeader.Size2);
+				WriteRawBytes(&source, 2);
+			}
+			else if (source <= 8388352L && source >= -8388608L)
+			{
+				Type(type | RawHeader.Size3);
+				WriteRawBytes(&source, 3);
+			}
+			else if (source <= 2147483647L && source >= -2147483648L)
+			{
+				Type(type | RawHeader.Size4);
+				WriteRawBytes(&source, 4);
+			}
+			else if (source <= 549755813632L && source >= -549755813888L)
+			{
+				Type(type | RawHeader.Size5);
+				WriteRawBytes(&source, 5);
+			}
+			else if (source <= 140737488289792L && source >= -140737488355328L)
+			{
+				Type(type | RawHeader.Size6);
+				WriteRawBytes(&source, 6);
+			}
+			else if (source <= 36028797002186752L && source >= -36028797018963968L)
+			{
+				Type(type | RawHeader.SizeMask);
+				WriteRawBytes(&source, 7);
 			}
 			else
 			{
-				bool flag2 = source <= 32767L && source >= -32768L;
-				if (flag2)
-				{
-					this.Type(type | RawHeader.Size2);
-					this.WriteRawBytes((void*)(&source), 2);
-				}
-				else
-				{
-					bool flag3 = source <= 8388352L && source >= -8388608L;
-					if (flag3)
-					{
-						this.Type(type | RawHeader.Size3);
-						this.WriteRawBytes((void*)(&source), 3);
-					}
-					else
-					{
-						bool flag4 = source <= 2147483647L && source >= -2147483648L;
-						if (flag4)
-						{
-							this.Type(type | RawHeader.Size4);
-							this.WriteRawBytes((void*)(&source), 4);
-						}
-						else
-						{
-							bool flag5 = source <= 549755813632L && source >= -549755813888L;
-							if (flag5)
-							{
-								this.Type(type | RawHeader.Size5);
-								this.WriteRawBytes((void*)(&source), 5);
-							}
-							else
-							{
-								bool flag6 = source <= 140737488289792L && source >= -140737488355328L;
-								if (flag6)
-								{
-									this.Type(type | RawHeader.Size6);
-									this.WriteRawBytes((void*)(&source), 6);
-								}
-								else
-								{
-									bool flag7 = source <= 36028797002186752L && source >= -36028797018963968L;
-									if (flag7)
-									{
-										this.Type(type | RawHeader.SizeMask);
-										this.WriteRawBytes((void*)(&source), 7);
-									}
-									else
-									{
-										this.Type(type);
-										this.WriteRawBytes((void*)(&source), 8);
-									}
-								}
-							}
-						}
-					}
-				}
+				Type(type);
+				WriteRawBytes(&source, 8);
 			}
 		}
 
 		private unsafe void WriteShortU64(ulong source, RawHeader type)
 		{
-			bool flag = source <= 255uL;
-			if (flag)
+			if (source <= 255uL)
 			{
-				this.Type(type | RawHeader.Size1);
-				this.WriteRawBytes((void*)(&source), 1);
+				Type(type | RawHeader.Size1);
+				WriteRawBytes(&source, 1);
+			}
+			else if (source <= 65535uL)
+			{
+				Type(type | RawHeader.Size2);
+				WriteRawBytes(&source, 2);
+			}
+			else if (source <= 16776960uL)
+			{
+				Type(type | RawHeader.Size3);
+				WriteRawBytes(&source, 3);
+			}
+			else if (source <= 4294901760uL)
+			{
+				Type(type | RawHeader.Size4);
+				WriteRawBytes(&source, 4);
+			}
+			else if (source <= 1099511627520uL)
+			{
+				Type(type | RawHeader.Size5);
+				WriteRawBytes(&source, 5);
+			}
+			else if (source <= 281474976645120uL)
+			{
+				Type(type | RawHeader.Size6);
+				WriteRawBytes(&source, 6);
+			}
+			else if (source <= 72057594021150720uL)
+			{
+				Type(type | RawHeader.SizeMask);
+				WriteRawBytes(&source, 7);
 			}
 			else
 			{
-				bool flag2 = source <= 65535uL;
-				if (flag2)
-				{
-					this.Type(type | RawHeader.Size2);
-					this.WriteRawBytes((void*)(&source), 2);
-				}
-				else
-				{
-					bool flag3 = source <= 16776960uL;
-					if (flag3)
-					{
-						this.Type(type | RawHeader.Size3);
-						this.WriteRawBytes((void*)(&source), 3);
-					}
-					else
-					{
-						bool flag4 = source <= 4294901760uL;
-						if (flag4)
-						{
-							this.Type(type | RawHeader.Size4);
-							this.WriteRawBytes((void*)(&source), 4);
-						}
-						else
-						{
-							bool flag5 = source <= 1099511627520uL;
-							if (flag5)
-							{
-								this.Type(type | RawHeader.Size5);
-								this.WriteRawBytes((void*)(&source), 5);
-							}
-							else
-							{
-								bool flag6 = source <= 281474976645120uL;
-								if (flag6)
-								{
-									this.Type(type | RawHeader.Size6);
-									this.WriteRawBytes((void*)(&source), 6);
-								}
-								else
-								{
-									bool flag7 = source <= 72057594021150720uL;
-									if (flag7)
-									{
-										this.Type(type | RawHeader.SizeMask);
-										this.WriteRawBytes((void*)(&source), 7);
-									}
-									else
-									{
-										this.Type(type);
-										this.WriteRawBytes((void*)(&source), 8);
-									}
-								}
-							}
-						}
-					}
-				}
+				Type(type);
+				WriteRawBytes(&source, 8);
 			}
 		}
 
 		public void Write(ref bool source)
 		{
-			this.Type(source ? RawHeader.True : RawHeader.False);
+			Type(source ? RawHeader.True : RawHeader.False);
 		}
 
 		public void Write(ref byte source)
 		{
-			this.Type(RawHeader.Byte);
-			this.data.Add(source);
+			Type(RawHeader.Byte);
+			data.Add(source);
 		}
 
 		public void Write(ref char source)
 		{
-			this.WriteShortU16((ushort)source, RawHeader.Char);
+			WriteShortU16(source, RawHeader.Char);
 		}
 
 		public void Write(ref short source)
 		{
-			this.WriteShortI16(source, RawHeader.Int16);
+			WriteShortI16(source, RawHeader.Int16);
 		}
 
 		public void Write(ref ushort source)
 		{
-			this.WriteShortU16(source, RawHeader.UInt16);
+			WriteShortU16(source, RawHeader.UInt16);
 		}
 
 		public void Write(ref int source)
 		{
-			this.WriteShortI32(source, RawHeader.Int32);
+			WriteShortI32(source, RawHeader.Int32);
 		}
 
 		public void Write(ref uint source)
 		{
-			this.WriteShortU32(source, RawHeader.UInt32);
+			WriteShortU32(source, RawHeader.UInt32);
 		}
 
 		public void Write(ref long source)
 		{
-			this.WriteShortI64(source, RawHeader.Int64);
+			WriteShortI64(source, RawHeader.Int64);
 		}
 
 		public void Write(ref ulong source)
 		{
-			this.WriteShortU64(source, RawHeader.UInt64);
+			WriteShortU64(source, RawHeader.UInt64);
 		}
 
 		public unsafe void Write(ref float source)
 		{
-			this.Type(RawHeader.Single);
+			Type(RawHeader.Single);
 			fixed (float* ptr = &source)
 			{
-				this.WriteRawBytes(ptr, 4);
+				WriteRawBytes(ptr, 4);
 			}
 		}
 
 		public unsafe void Write(ref double source)
 		{
-			this.Type(RawHeader.Double);
+			Type(RawHeader.Double);
 			fixed (double* ptr = &source)
 			{
-				this.WriteRawBytes(ptr, 8);
+				WriteRawBytes(ptr, 8);
 			}
 		}
 
 		public void Write(ref DateTime source)
 		{
-			this.WriteShortI64((long)(source - RawBuffer.UnixEpoc).TotalMilliseconds, RawHeader.DateTime);
+			WriteShortI64((long)(source - RawBuffer.UnixEpoc).TotalMilliseconds, RawHeader.DateTime);
 		}
 
 		public void Write(ref TimeSpan source)
 		{
-			this.WriteShortI32((int)source.TotalMilliseconds, RawHeader.Time);
+			WriteShortI32((int)source.TotalMilliseconds, RawHeader.Time);
 		}
 
 		public unsafe void Write(ref decimal source)
 		{
-			this.Type(RawHeader.Decimal);
+			Type(RawHeader.Decimal);
 			fixed (decimal* ptr = &source)
 			{
-				this.WriteRawBytes(ptr, 16);
+				WriteRawBytes(ptr, 16);
 			}
 		}
 
 		public unsafe void Write(ref Guid source)
 		{
-			this.Type(RawHeader.Guid);
+			Type(RawHeader.Guid);
 			fixed (Guid* ptr = &source)
 			{
-				this.WriteRawBytes(ptr, 16);
+				WriteRawBytes(ptr, 16);
 			}
 		}
 
 		public void Write(ref string source)
 		{
-			bool flag = source == null;
-			if (flag)
+			if (source == null)
 			{
-				this.Type(RawHeader.Null);
+				Type(RawHeader.Null);
 			}
 			else
 			{
-				byte[] bytes = Encoding.UTF8.GetBytes(source);
-				this.WriteShortI16((short)bytes.Length, RawHeader.String);
-				this.data.AddRange(bytes);
+				var bytes = Encoding.UTF8.GetBytes(source);
+				WriteShortI16((short)bytes.Length, RawHeader.String);
+				data.AddRange(bytes);
 			}
 		}
 
 		public void Write(ref byte[] source)
 		{
-			bool flag = source == null;
-			if (flag)
+			if (source == null)
 			{
-				this.Type(RawHeader.Null);
+				Type(RawHeader.Null);
 			}
 			else
 			{
-				this.WriteShortI32(source.Length, RawHeader.ByteArray);
-				this.data.AddRange(source);
+				WriteShortI32(source.Length, RawHeader.ByteArray);
+				data.AddRange(source);
 			}
 		}
 
 		public void WriteBytes(byte[] source)
 		{
-			this.data.AddRange(source);
+			data.AddRange(source);
 		}
 	}
 	public class RawDeserializer : IAxDeserializer
 	{
 		private readonly RawBuffer buffer;
 
-		private int fields_read = 0;
+		private int fields_read;
 
 		public RawDeserializer(byte[] data)
 		{
-			this.buffer = new RawBuffer(data);
+			buffer = new RawBuffer(data);
 		}
 
 		public RawDeserializer(RawBuffer data)
 		{
-			this.buffer = new RawBuffer(data);
+			buffer = new RawBuffer(data);
 		}
 
 		private SerializationException Fail(RawHeader found, params RawHeader[] expected)
 		{
-			return new SerializationException(string.Concat(new object[]
-			{
-				"Incorrect field type header. expected (",
-				string.Join<RawHeader>("|", expected),
-				") but found (",
-				found,
-				") at position ",
-				this.buffer.Pos,
-				", field ",
-				this.fields_read
-			}));
+			return
+				new SerializationException(
+					$"Incorrect field type header. expected ({string.Join("|", expected)}) but found ({found}) at position {buffer.Pos}, field {fields_read}");
 		}
 
 		private void Success()
 		{
-			this.fields_read++;
+			fields_read++;
 		}
 
 		private RawHeader Expect(RawHeader expected)
 		{
-			RawHeader found = this.buffer.NextType();
-			RawHeader? rawHeader = this.buffer.TrySimple(found, expected);
-			bool hasValue = rawHeader.HasValue;
-			if (hasValue)
-			{
-				return rawHeader.Value;
-			}
-			throw this.Fail(found, new RawHeader[]
-			{
-				expected
-			});
+			var found = buffer.NextType();
+			var rawHeader = buffer.TrySimple(found, expected);
+			if (rawHeader.HasValue) return rawHeader.Value;
+			throw Fail(found, expected);
 		}
 
 		private RawHeader? ExpectNull(RawHeader expected)
 		{
-			RawHeader found = this.buffer.NextType();
-			RawHeader? rawHeader = this.buffer.TrySimple(found, expected);
-			bool hasValue = rawHeader.HasValue;
-			RawHeader? result;
-			if (hasValue)
-			{
-				result = rawHeader;
-			}
-			else
-			{
-				bool hasValue2 = this.buffer.TrySimple(found, RawHeader.Null).HasValue;
-				if (!hasValue2)
-				{
-					throw this.Fail(found, new RawHeader[]
-					{
-						expected,
-						RawHeader.Null
-					});
-				}
-				result = null;
-			}
-			return result;
+			var found = buffer.NextType();
+			var rawHeader = buffer.TrySimple(found, expected);
+			if (rawHeader.HasValue) return rawHeader;
+			if (buffer.TrySimple(found, RawHeader.Null).HasValue) return null;
+			throw Fail(found, expected, RawHeader.Null);
 		}
 
 		public bool ReadNull()
 		{
-			bool flag = !this.buffer.TrySimple(this.buffer.NextType(), RawHeader.Null).HasValue;
-			bool result;
-			if (flag)
-			{
-				this.Success();
-				result = true;
-			}
-			else
-			{
-				result = false;
-			}
-			return result;
+			if (buffer.TrySimple(buffer.NextType(), RawHeader.Null).HasValue) return false;
+			Success();
+			return true;
 		}
 
 		public void ReadOpenObject()
 		{
-			this.Expect(RawHeader.OpenObject);
-			this.Success();
+			Expect(RawHeader.OpenObject);
+			Success();
 		}
 
 		public void ReadCloseObject()
 		{
-			this.Expect(RawHeader.CloseObject);
-			this.Success();
+			Expect(RawHeader.CloseObject);
+			Success();
 		}
 
 		public void ReadOpenArray()
 		{
-			this.Expect(RawHeader.OpenArray);
-			this.Success();
+			Expect(RawHeader.OpenArray);
+			Success();
 		}
 
 		public void ReadCloseArray()
 		{
-			this.Expect(RawHeader.CloseArray);
-			this.Success();
+			Expect(RawHeader.CloseArray);
+			Success();
 		}
 
 		public void Read(out bool target)
 		{
-			RawHeader found = this.buffer.NextType();
-			bool hasValue = this.buffer.TrySimple(found, RawHeader.False).HasValue;
-			if (hasValue)
-			{
-				target = false;
-			}
+			var found = buffer.NextType();
+			if (buffer.TrySimple(found, RawHeader.False).HasValue) target = false;
+			else if (buffer.TrySimple(found, RawHeader.True).HasValue) target = true;
 			else
-			{
-				bool hasValue2 = this.buffer.TrySimple(found, RawHeader.True).HasValue;
-				if (!hasValue2)
-				{
-					throw this.Fail(found, new RawHeader[]
-					{
-						RawHeader.False,
-						RawHeader.True
-					});
-				}
-				target = true;
-			}
-			this.Success();
+				throw Fail(found, RawHeader.False, RawHeader.True);
+			Success();
 		}
 
 		public void Read(out byte target)
 		{
-			this.Expect(RawHeader.Byte);
-			target = this.buffer.Byte();
-			this.Success();
+			Expect(RawHeader.Byte);
+			target = buffer.Byte();
+			Success();
 		}
 
 		public void Read(out char target)
 		{
-			RawHeader size = this.Expect(RawHeader.Char);
-			target = this.buffer.Char(size);
-			this.Success();
+			var size = Expect(RawHeader.Char);
+			target = buffer.Char(size);
+			Success();
 		}
 
 		public void Read(out short target)
 		{
-			RawHeader size = this.Expect(RawHeader.Int16);
-			target = this.buffer.Int16(size);
-			this.Success();
+			var size = Expect(RawHeader.Int16);
+			target = buffer.Int16(size);
+			Success();
 		}
 
 		public void Read(out ushort target)
 		{
-			RawHeader size = this.Expect(RawHeader.UInt16);
-			target = this.buffer.UInt16(size);
-			this.Success();
+			var size = Expect(RawHeader.UInt16);
+			target = buffer.UInt16(size);
+			Success();
 		}
 
 		public void Read(out int target)
 		{
-			RawHeader size = this.Expect(RawHeader.Int32);
-			target = this.buffer.Int32(size);
-			this.Success();
+			var size = Expect(RawHeader.Int32);
+			target = buffer.Int32(size);
+			Success();
 		}
 
 		public void Read(out uint target)
 		{
-			RawHeader size = this.Expect(RawHeader.UInt32);
-			target = this.buffer.UInt32(size);
-			this.Success();
+			var size = Expect(RawHeader.UInt32);
+			target = buffer.UInt32(size);
+			Success();
 		}
 
 		public void Read(out long target)
 		{
-			RawHeader size = this.Expect(RawHeader.Int64);
-			target = this.buffer.Int64(size);
-			this.Success();
+			var size = Expect(RawHeader.Int64);
+			target = buffer.Int64(size);
+			Success();
 		}
 
 		public void Read(out ulong target)
 		{
-			RawHeader size = this.Expect(RawHeader.UInt64);
-			target = this.buffer.UInt64(size);
-			this.Success();
+			var size = Expect(RawHeader.UInt64);
+			target = buffer.UInt64(size);
+			Success();
 		}
 
 		public void Read(out float target)
 		{
-			this.Expect(RawHeader.Single);
-			target = this.buffer.Single();
-			this.Success();
+			Expect(RawHeader.Single);
+			target = buffer.Single();
+			Success();
 		}
 
 		public void Read(out double target)
 		{
-			this.Expect(RawHeader.Double);
-			target = this.buffer.Double();
-			this.Success();
+			Expect(RawHeader.Double);
+			target = buffer.Double();
+			Success();
 		}
 
 		public void Read(out decimal target)
 		{
-			this.Expect(RawHeader.Decimal);
-			target = this.buffer.Decimal();
-			this.Success();
+			Expect(RawHeader.Decimal);
+			target = buffer.Decimal();
+			Success();
 		}
 
 		public void Read(out DateTime target)
 		{
-			this.Expect(RawHeader.DateTime);
-			target = RawBuffer.UnixEpoc.AddMilliseconds((double)this.buffer.Int64(RawHeader.False));
-			this.Success();
+			Expect(RawHeader.DateTime);
+			target = RawBuffer.UnixEpoc.AddMilliseconds(buffer.Int64(RawHeader.SizeFull));
+			Success();
 		}
 
 		public void Read(out TimeSpan target)
 		{
-			RawHeader size = this.Expect(RawHeader.Time);
-			target = new TimeSpan(0, 0, 0, 0, this.buffer.Int32(size));
-			this.Success();
+			var size = Expect(RawHeader.Time);
+			target = new TimeSpan(0, 0, 0, 0, buffer.Int32(size));
+			Success();
 		}
 
 		public void Read(out Guid target)
 		{
-			this.Expect(RawHeader.Guid);
-			target = this.buffer.Guid();
-			this.Success();
+			Expect(RawHeader.Guid);
+			target = buffer.Guid();
+			Success();
 		}
 
 		public void Read(out string target)
 		{
-			RawHeader? rawHeader = this.ExpectNull(RawHeader.String);
-			target = (rawHeader.HasValue ? this.buffer.String(rawHeader.Value) : null);
-			this.Success();
+			var rawHeader = ExpectNull(RawHeader.String);
+			target = (rawHeader.HasValue ? buffer.String(rawHeader.Value) : null);
+			Success();
 		}
 
 		public void Read(out byte[] target)
 		{
-			RawHeader? rawHeader = this.ExpectNull(RawHeader.ByteArray);
-			target = (rawHeader.HasValue ? this.buffer.Bytes(rawHeader.Value) : null);
-			this.Success();
+			var rawHeader = ExpectNull(RawHeader.ByteArray);
+			target = (rawHeader.HasValue ? buffer.Bytes(rawHeader.Value) : null);
+			Success();
 		}
 
 		public void Read(out byte[] target, int count)
 		{
-			target = this.buffer.Bytes(count);
-			this.Success();
+			target = buffer.Bytes(count);
+			Success();
 		}
 	}
 	public class RawBuffer
 	{
 		private readonly byte[] Data;
 
-		private int pos = 0;
-
 		internal static DateTime UnixEpoc = new DateTime(1970, 1, 1);
 
-		public int Pos
-		{
-			get
-			{
-				return this.pos;
-			}
-		}
+		public int Pos { get; private set; }
 
 		public RawBuffer(byte[] data)
 		{
-			this.Data = data;
+			Data = data;
 		}
 
 		public RawBuffer(byte[] data, int offset, int count)
 		{
-			this.Data = new byte[count];
-			Array.Copy(data, offset, this.Data, 0, count);
+			Data = new byte[count];
+			Array.Copy(data, offset, Data, 0, count);
 		}
 
 		public RawBuffer(RawBuffer data)
 		{
-			this.Data = data.Data;
+			Data = data.Data;
 		}
 
 		public RawHeader NextType()
 		{
-			return (RawHeader)this.Data[this.pos];
+			return (RawHeader)Data[Pos];
 		}
 
 		public bool EndOfBuffer()
 		{
-			return this.pos >= this.Data.Length;
+			return Pos >= Data.Length;
 		}
 
 		public void MoveNext()
 		{
-			this.pos++;
+			Pos++;
 		}
 
 		public RawHeader? TrySimple(RawHeader found, RawHeader expected)
 		{
-			bool flag = (found & RawHeader.TypeMask) == expected;
-			RawHeader? result;
-			if (flag)
+			if ((found & RawHeader.TypeMask) == expected)
 			{
-				this.MoveNext();
-				result = new RawHeader?(found & RawHeader.SizeMask);
+				MoveNext();
+				return found & RawHeader.SizeMask;
 			}
-			else
-			{
-				result = null;
-			}
-			return result;
+			return null;
 		}
 
 		public byte Byte()
 		{
-			byte result = this.Data[this.pos];
-			this.pos++;
+			var result = Data[Pos];
+			Pos++;
 			return result;
 		}
 
 		public unsafe char Char(RawHeader size)
 		{
-			bool flag = size == RawHeader.Size1;
 			char result;
 			fixed (byte* buf = Data)
 			{
-				if (flag)
+				if (size == RawHeader.Size1)
 				{
-					char c = (char)*(byte*)(buf + pos);
-					this.pos++;
-					result = c;
+					result = (char)*(buf + Pos);
+					Pos++;
 				}
 				else
 				{
-					char c2 = (char)*(ushort*)(buf + pos);
-					this.pos += 2;
-					result = c2;
+					result = (char)*(ushort*)(buf + Pos);
+					Pos += 2;
 				}
 			}
 			return result;
@@ -835,21 +675,18 @@ namespace LaWare.Utility.RawSerializer
 
 		public unsafe ushort UInt16(RawHeader size)
 		{
-			bool flag = size == RawHeader.Size1;
 			ushort result;
 			fixed (byte* buf = Data)
 			{
-				if (flag)
+				if (size == RawHeader.Size1)
 				{
-					ushort num = (ushort)*(byte*)(buf + pos);
-					this.pos++;
-					result = num;
+					result = (ushort)*(buf + Pos);
+					Pos++;
 				}
 				else
 				{
-					ushort num2 = *(ushort*)(buf + pos);
-					this.pos += 2;
-					result = num2;
+					result = (*(ushort*)(buf + Pos));
+					Pos += 2;
 				}
 			}
 			return result;
@@ -857,41 +694,28 @@ namespace LaWare.Utility.RawSerializer
 
 		public unsafe uint UInt32(RawHeader size)
 		{
-			bool flag = size == RawHeader.Size1;
 			uint result;
 			fixed (byte* buf = Data)
 			{
-				if (flag)
+				if (size == RawHeader.Size1)
 				{
-					uint num = (uint) (*(buf + pos));
-					this.pos++;
-					result = num;
+					result = (uint) (*(buf + Pos));
+					Pos++;
+				}
+				else if (size == RawHeader.Size2)
+				{
+					result = (uint) (*(ushort*) (buf + Pos));
+					Pos += 2;
+				}
+				else if (size == RawHeader.Size3)
+				{
+					result = (uint) (*(ushort*) (buf + Pos) | (buf + Pos)[2] << 16);
+					Pos += 3;
 				}
 				else
 				{
-					bool flag2 = size == RawHeader.Size2;
-					if (flag2)
-					{
-						uint num2 = (uint) (*(ushort*) (buf + pos));
-						this.pos += 2;
-						result = num2;
-					}
-					else
-					{
-						bool flag3 = size == RawHeader.Size3;
-						if (flag3)
-						{
-							uint num3 = (uint) ((int) (*(ushort*) (buf + pos)) | (int) (buf + pos)[2] << 16);
-							this.pos += 3;
-							result = num3;
-						}
-						else
-						{
-							uint num4 = *(uint*) (buf + pos);
-							this.pos += 4;
-							result = num4;
-						}
-					}
+					result = (*(uint*) (buf + Pos));
+					Pos += 4;
 				}
 			}
 			return result;
@@ -899,84 +723,51 @@ namespace LaWare.Utility.RawSerializer
 
 		public unsafe ulong UInt64(RawHeader size)
 		{
-			bool flag = size == RawHeader.Size1;
 			ulong result;
 			fixed (byte* buf = Data)
 			{
-				if (flag)
+				if (size == RawHeader.Size1)
 				{
-					ulong num = (ulong) (*(buf + pos));
-					this.pos++;
-					result = num;
+					result = (ulong) (*(buf + Pos));
+					Pos++;
+				}
+				else if (size == RawHeader.Size2)
+				{
+					result = (ulong) (*(ushort*) (buf + Pos));
+					Pos += 2;
+				}
+				else if (size == RawHeader.Size3)
+				{
+					result = *(ushort*) (buf + Pos) | (ulong) (buf + Pos)[2] << 16;
+					Pos += 3;
+				}
+				else if (size == RawHeader.Size4)
+				{
+					result = (ulong) (*(uint*) (buf + Pos));
+					Pos += 4;
+				}
+				else if (size == RawHeader.Size5)
+				{
+					result = *(uint*) (buf + Pos) | (ulong) (buf + Pos)[4] << 32;
+					Pos += 5;
+				}
+				else if (size == RawHeader.Size6)
+				{
+					result = *(uint*) (buf + Pos) |
+					         (ulong) ((ushort*) (buf + Pos))[2] << 32;
+					Pos += 6;
+				}
+				else if (size == RawHeader.SizeMask)
+				{
+					result = *(uint*) (buf + Pos) |
+					         (ulong) ((ushort*) (buf + Pos))[2] << 32 |
+					         (ulong) (buf + Pos)[6] << 48;
+					Pos += 7;
 				}
 				else
 				{
-					bool flag2 = size == RawHeader.Size2;
-					if (flag2)
-					{
-						ulong num2 = (ulong) (*(ushort*) (buf + pos));
-						this.pos += 2;
-						result = num2;
-					}
-					else
-					{
-						bool flag3 = size == RawHeader.Size3;
-						if (flag3)
-						{
-							ulong num3 = (ulong) (*(ushort*) (buf + pos)) | (ulong) (buf + pos)[2] << 16;
-							this.pos += 3;
-							result = num3;
-						}
-						else
-						{
-							bool flag4 = size == RawHeader.Size4;
-							if (flag4)
-							{
-								ulong num4 = (ulong) (*(uint*) (buf + pos));
-								this.pos += 4;
-								result = num4;
-							}
-							else
-							{
-								bool flag5 = size == RawHeader.Size5;
-								if (flag5)
-								{
-									ulong num5 = (ulong) (*(uint*) (buf + pos)) | (ulong) (buf + pos)[4] << 32;
-									this.pos += 5;
-									result = num5;
-								}
-								else
-								{
-									bool flag6 = size == RawHeader.Size6;
-									if (flag6)
-									{
-										ulong num6 = (ulong) (*(uint*) (buf + pos)) |
-										             (ulong) ((ushort*) (buf + pos))[2] << 32;
-										this.pos += 6;
-										result = num6;
-									}
-									else
-									{
-										bool flag7 = size == RawHeader.SizeMask;
-										if (flag7)
-										{
-											ulong num7 = (ulong) (*(uint*) (buf + pos)) |
-											             (ulong) ((ushort*) (buf + pos))[2] << 32 |
-											             (ulong) (buf + pos)[6] << 48;
-											this.pos += 7;
-											result = num7;
-										}
-										else
-										{
-											ulong num8 = (ulong) (*(long*) (buf + pos));
-											this.pos += 8;
-											result = num8;
-										}
-									}
-								}
-							}
-						}
-					}
+					result = (ulong) (*(long*) (buf + Pos));
+					Pos += 8;
 				}
 			}
 			return result;
@@ -984,21 +775,18 @@ namespace LaWare.Utility.RawSerializer
 
 		public unsafe short Int16(RawHeader size)
 		{
-			bool flag = size == RawHeader.Size1;
 			short result;
 			fixed (byte* buf = Data)
 			{
-				if (flag)
+				if (size == RawHeader.Size1)
 				{
-					short num = (short) (*(sbyte*) (buf + pos));
-					this.pos++;
-					result = num;
+					result = (short)(*(sbyte*)(buf + Pos));
+					Pos++;
 				}
 				else
 				{
-					short num2 = *(short*) (buf + pos);
-					this.pos += 2;
-					result = num2;
+					result = (*(short*)(buf + Pos));
+					Pos += 2;
 				}
 			}
 			return result;
@@ -1006,41 +794,28 @@ namespace LaWare.Utility.RawSerializer
 
 		public unsafe int Int32(RawHeader size)
 		{
-			bool flag = size == RawHeader.Size1;
 			int result;
 			fixed (byte* buf = Data)
 			{
-				if (flag)
+				if (size == RawHeader.Size1)
 				{
-					int num = (int) (*(sbyte*) (buf + pos));
-					this.pos++;
-					result = num;
+					result = (int)(*(sbyte*)(buf + Pos));
+					Pos++;
+				}
+				else if (size == RawHeader.Size2)
+				{
+					result = (int) (*(short*) (buf + Pos));
+					Pos += 2;
+				}
+				else if (size == RawHeader.Size3)
+				{
+					result = *(ushort*) (buf + Pos) | ((sbyte*) (buf + Pos))[2] << 16;
+					Pos += 3;
 				}
 				else
 				{
-					bool flag2 = size == RawHeader.Size2;
-					if (flag2)
-					{
-						int num2 = (int) (*(short*) (buf + pos));
-						this.pos += 2;
-						result = num2;
-					}
-					else
-					{
-						bool flag3 = size == RawHeader.Size3;
-						if (flag3)
-						{
-							int num3 = (int) (*(ushort*) (buf + pos)) | (int) ((sbyte*) (buf + pos))[2] << 16;
-							this.pos += 3;
-							result = num3;
-						}
-						else
-						{
-							int num4 = *(int*) (buf + pos);
-							this.pos += 4;
-							result = num4;
-						}
-					}
+					result = (*(int*) (buf + Pos));
+					Pos += 4;
 				}
 			}
 			return result;
@@ -1048,93 +823,57 @@ namespace LaWare.Utility.RawSerializer
 
 		public unsafe long Int64(RawHeader size)
 		{
-			bool flag = size == RawHeader.Size1;
 			long result;
 			fixed (byte* buf = Data)
 			{
-				if (flag)
+				if (size == RawHeader.Size1)
 				{
-					long num = (long) (*(sbyte*) (buf + pos));
-					this.pos++;
-					result = num;
+					result = (long)(*(sbyte*)(buf + Pos));
+					Pos++;
+				}
+				else if (size == RawHeader.Size2)
+				{
+					var num2 = (long) (*(short*) (buf + Pos));
+					result = num2;
+					Pos += 2;
+				}
+				else if (size == RawHeader.Size3)
+				{
+					result = (long)
+							(*(ushort*)(buf + Pos) |
+							 (ulong)((sbyte*)(buf + Pos))[2] << 16);
+					Pos += 3;
+				}
+				else if (size == RawHeader.Size4)
+				{
+					result = (long)(*(int*)(buf + Pos));
+					Pos += 4;
+				}
+				else if (size == RawHeader.Size5)
+				{
+					result = (long)
+							(*(uint*)(buf + Pos) |
+							 (ulong)((sbyte*)(buf + Pos))[4] << 32);
+					Pos += 5;
+				}
+				else if (size == RawHeader.Size6)
+				{
+					result = (long)
+							(*(uint*)(buf + Pos) |
+							 (ulong)((short*)(buf + Pos))[2] << 32);
+					Pos += 6;
+				}
+				else if (size == RawHeader.Size7)
+				{
+					result = (long)
+							(*(uint*)(buf + Pos) | (ulong)((ushort*)(buf + Pos))[2] << 32 |
+							 (ulong)((sbyte*)(buf + Pos))[6] << 48);
+					Pos += 7;
 				}
 				else
 				{
-					bool flag2 = size == RawHeader.Size2;
-					if (flag2)
-					{
-						long num2 = (long) (*(short*) (buf + pos));
-						this.pos += 2;
-						result = num2;
-					}
-					else
-					{
-						bool flag3 = size == RawHeader.Size3;
-						if (flag3)
-						{
-							long num3 =
-								(long)
-									((ulong) (*(ushort*) (buf + pos)) |
-									 (ulong) ((ulong) ((long) ((sbyte*) (buf + pos))[2]) << 16));
-							this.pos += 3;
-							result = num3;
-						}
-						else
-						{
-							bool flag4 = size == RawHeader.Size4;
-							if (flag4)
-							{
-								long num4 = (long) (*(int*) (buf + pos));
-								this.pos += 4;
-								result = num4;
-							}
-							else
-							{
-								bool flag5 = size == RawHeader.Size5;
-								if (flag5)
-								{
-									long num5 =
-										(long)
-											((ulong) (*(uint*) (buf + pos)) |
-											 (ulong) ((ulong) ((long) ((sbyte*) (buf + pos))[4]) << 32));
-									this.pos += 5;
-									result = num5;
-								}
-								else
-								{
-									bool flag6 = size == RawHeader.Size6;
-									if (flag6)
-									{
-										long num6 =
-											(long)
-												((ulong) (*(uint*) (buf + pos)) |
-												 (ulong) ((ulong) ((long) ((short*) (buf + pos))[2]) << 32));
-										this.pos += 6;
-										result = num6;
-									}
-									else
-									{
-										bool flag7 = size == RawHeader.SizeMask;
-										if (flag7)
-										{
-											long num7 =
-												(long)
-													((ulong) (*(uint*) (buf + pos)) | (ulong) ((ushort*) (buf + pos))[2] << 32 |
-													 (ulong) ((ulong) ((long) ((sbyte*) (buf + pos))[6]) << 48));
-											this.pos += 7;
-											result = num7;
-										}
-										else
-										{
-											long num8 = *(long*) (buf + pos);
-											this.pos += 8;
-											result = num8;
-										}
-									}
-								}
-							}
-						}
-					}
+					result = (*(long*)(buf + Pos));
+					Pos += 8;
 				}
 			}
 			return result;
@@ -1144,10 +883,8 @@ namespace LaWare.Utility.RawSerializer
 		{
 			float result;
 			fixed (byte* buf = Data)
-			{
-				result = *(float*) (buf + pos);
-				this.pos += 4;
-			}
+				result = *(float*) (buf + Pos);
+			Pos += 4;
 			return result;
 		}
 
@@ -1155,58 +892,55 @@ namespace LaWare.Utility.RawSerializer
 		{
 			double result;
 			fixed (byte* buf = Data)
-			{
-				result = *(double*) (buf + pos);
-				this.pos += 8;
-			}
+				result = *(double*) (buf + Pos);
+			Pos += 8;
 			return result;
 		}
 
 		public unsafe decimal Decimal()
 		{
-			int[] array = new int[4];
+			decimal result;
 			fixed (byte* buf = Data)
-			{
-				for (int i = 0; i < 4; i++)
-				{
-					array[i] = *(int*)(buf + i*4);
-				}
-			}
-			this.pos += 16;
-			return new decimal(array);
+				result = *(decimal*) buf;
+			Pos += 16;
+			return result;
 		}
 
 		public DateTime DateTime()
 		{
-			return RawBuffer.UnixEpoc.AddMilliseconds((double)this.Int64(RawHeader.False));
+			return UnixEpoc.AddMilliseconds(Int64(RawHeader.SizeFull));
 		}
 
 		public TimeSpan Time(RawHeader size)
 		{
-			return new TimeSpan(0, 0, 0, 0, this.Int32(size));
+			return new TimeSpan(0, 0, 0, 0, Int32(size));
 		}
 
-		public Guid Guid()
+		public unsafe Guid Guid()
 		{
-			return new Guid(this.Bytes(16));
+			Guid result;
+			fixed (byte* buf = Data)
+				result = *(Guid*)buf;
+			Pos += 16;
+			return result;
 		}
 
 		public byte[] Bytes(int count)
 		{
-			byte[] array = new byte[count];
-			Array.Copy(this.Data, this.pos, array, 0, count);
-			this.pos += count;
+			var array = new byte[count];
+			Array.Copy(Data, Pos, array, 0, count);
+			Pos += count;
 			return array;
 		}
 
 		public string String(RawHeader size)
 		{
-			return Encoding.UTF8.GetString(this.Bytes((int)this.Int16(size)));
+			return Encoding.UTF8.GetString(Bytes(Int16(size)));
 		}
 
 		public byte[] Bytes(RawHeader size)
 		{
-			return this.Bytes(this.Int32(size));
+			return Bytes(Int32(size));
 		}
 	}
 	public class RawBufferInspector
@@ -1222,45 +956,45 @@ namespace LaWare.Utility.RawSerializer
 
 		public RawBufferInspector(byte[] data, int offset, int count)
 		{
-			this.buffer = new RawBuffer(data, offset, count);
-			this.Items = new List<string>();
-			this.print();
+			buffer = new RawBuffer(data, offset, count);
+			Items = new List<string>();
+			print();
 		}
 
 		public RawBufferInspector(byte[] data)
 		{
-			this.buffer = new RawBuffer(data);
-			this.Items = new List<string>();
-			this.print();
+			buffer = new RawBuffer(data);
+			Items = new List<string>();
+			print();
 		}
 
 		public RawBufferInspector(RawBuffer data)
 		{
-			this.buffer = new RawBuffer(data);
-			this.Items = new List<string>();
-			this.print();
+			buffer = new RawBuffer(data);
+			Items = new List<string>();
+			print();
 		}
 
 		public override string ToString()
 		{
-			return string.Join(Environment.NewLine, this.Items);
+			return string.Join(Environment.NewLine, Items);
 		}
 
 		private void print()
 		{
-			while (this.print(0) && !this.buffer.EndOfBuffer())
+			while (print(0) && !buffer.EndOfBuffer())
 			{
 			}
 		}
 
 		private bool print(int depth)
 		{
-			RawHeader FieldSize = RawHeader.False;
-			string FieldSizeStr = "";
+			var FieldSize = RawHeader.SizeFull;
+			var FieldSizeStr = "";
 			Func<RawHeader, bool> func = delegate(RawHeader expected)
 			{
-				RawHeader? rawHeader = this.buffer.TrySimple(this.buffer.NextType(), expected);
-				bool hasValue = rawHeader.HasValue;
+				var rawHeader = buffer.TrySimple(buffer.NextType(), expected);
+				var hasValue = rawHeader.HasValue;
 				if (hasValue)
 				{
 					FieldSize = rawHeader.Value;
@@ -1268,7 +1002,7 @@ namespace LaWare.Utility.RawSerializer
 				}
 				return rawHeader.HasValue;
 			};
-			bool flag = this.buffer.EndOfBuffer();
+			var flag = buffer.EndOfBuffer();
 			bool result;
 			if (flag)
 			{
@@ -1276,52 +1010,52 @@ namespace LaWare.Utility.RawSerializer
 			}
 			else
 			{
-				bool flag2 = func(RawHeader.CloseObject);
+				var flag2 = func(RawHeader.CloseObject);
 				if (flag2)
 				{
-					this.print(depth, "}");
-					this.print(depth, "ERROR: UNEXPECTED CLOSE OF OBJECT");
+					print(depth, "}");
+					print(depth, "ERROR: UNEXPECTED CLOSE OF OBJECT");
 					result = false;
 				}
 				else
 				{
-					bool flag3 = func(RawHeader.CloseArray);
+					var flag3 = func(RawHeader.CloseArray);
 					if (flag3)
 					{
-						this.print(depth, "]");
-						this.print(depth, "ERROR: UNEXPECTED CLOSE OF ARRAY");
+						print(depth, "]");
+						print(depth, "ERROR: UNEXPECTED CLOSE OF ARRAY");
 						result = false;
 					}
 					else
 					{
-						bool flag4 = func(RawHeader.OpenObject);
+						var flag4 = func(RawHeader.OpenObject);
 						if (flag4)
 						{
-							this.print(depth, "OBJECT");
-							this.print(depth, "{");
+							print(depth, "OBJECT");
+							print(depth, "{");
 							while (true)
 							{
-								bool flag5 = this.buffer.EndOfBuffer();
+								var flag5 = buffer.EndOfBuffer();
 								if (flag5)
 								{
 									break;
 								}
-								bool flag6 = func(RawHeader.CloseObject);
+								var flag6 = func(RawHeader.CloseObject);
 								if (flag6)
 								{
 									goto Block_6;
 								}
-								bool flag7 = !this.print(depth + 1);
+								var flag7 = !print(depth + 1);
 								if (flag7)
 								{
 									goto Block_7;
 								}
 							}
-							this.print(depth + 1, "ERROR: UNEXPECTED END OF BUFFER");
+							print(depth + 1, "ERROR: UNEXPECTED END OF BUFFER");
 							result = false;
 							return result;
 							Block_6:
-							this.print(depth, "}");
+							print(depth, "}");
 							result = true;
 							return result;
 							Block_7:
@@ -1329,53 +1063,47 @@ namespace LaWare.Utility.RawSerializer
 						}
 						else
 						{
-							bool flag8 = func(RawHeader.OpenArray);
+							var flag8 = func(RawHeader.OpenArray);
 							if (flag8)
 							{
-								bool flag9 = this.buffer.EndOfBuffer();
+								var flag9 = buffer.EndOfBuffer();
 								if (flag9)
 								{
-									this.print(depth, "ARRAY[???]");
-									this.print(depth, "[");
-									this.print(depth + 1, "ERROR: UNEXPECTED END OF BUFFER");
+									print(depth, "ARRAY[???]");
+									print(depth, "[");
+									print(depth + 1, "ERROR: UNEXPECTED END OF BUFFER");
 									result = false;
 								}
 								else
 								{
-									bool flag10 = func(RawHeader.Int32);
+									var flag10 = func(RawHeader.Int32);
 									if (flag10)
 									{
-										this.print(depth, string.Concat(new object[]
-										{
-											"ARRAY[",
-											this.buffer.Int32(FieldSize),
-											FieldSizeStr,
-											"]"
-										}));
-										this.print(depth, "[");
+										print(depth, string.Concat("ARRAY[", buffer.Int32(FieldSize), FieldSizeStr, "]"));
+										print(depth, "[");
 										while (true)
 										{
-											bool flag11 = this.buffer.EndOfBuffer();
+											var flag11 = buffer.EndOfBuffer();
 											if (flag11)
 											{
 												break;
 											}
-											bool flag12 = func(RawHeader.CloseArray);
+											var flag12 = func(RawHeader.CloseArray);
 											if (flag12)
 											{
 												goto Block_12;
 											}
-											bool flag13 = !this.print(depth + 1);
+											var flag13 = !print(depth + 1);
 											if (flag13)
 											{
 												goto Block_13;
 											}
 										}
-										this.print(depth + 1, "ERROR: UNEXPECTED END OF BUFFER");
+										print(depth + 1, "ERROR: UNEXPECTED END OF BUFFER");
 										result = false;
 										return result;
 										Block_12:
-										this.print(depth, "]");
+										print(depth, "]");
 										result = true;
 										return result;
 										Block_13:
@@ -1383,214 +1111,158 @@ namespace LaWare.Utility.RawSerializer
 									}
 									else
 									{
-										this.print(depth, "ARRAY[???]");
-										this.print(depth, "[");
-										this.print(depth + 1, "ERROR: MISSING INT32 FOR ARRAY LENGHT");
+										print(depth, "ARRAY[???]");
+										print(depth, "[");
+										print(depth + 1, "ERROR: MISSING INT32 FOR ARRAY LENGHT");
 										result = false;
 									}
 								}
 							}
 							else
 							{
-								bool flag14 = func(RawHeader.Null);
+								var flag14 = func(RawHeader.Null);
 								if (flag14)
 								{
-									this.print(depth, "NULL     NULL");
+									print(depth, "NULL     NULL");
 								}
 								else
 								{
-									bool flag15 = func(RawHeader.True);
+									var flag15 = func(RawHeader.True);
 									if (flag15)
 									{
-										this.print(depth, "BOOL     TRUE");
+										print(depth, "BOOL     TRUE");
 									}
 									else
 									{
-										bool flag16 = func(RawHeader.False);
+										var flag16 = func(RawHeader.False);
 										if (flag16)
 										{
-											this.print(depth, "BOOL     FALSE");
+											print(depth, "BOOL     FALSE");
 										}
 										else
 										{
-											bool flag17 = func(RawHeader.Byte);
+											var flag17 = func(RawHeader.Byte);
 											if (flag17)
 											{
-												this.print(depth, "BYTE     " + this.buffer.Byte());
+												print(depth, "BYTE     " + buffer.Byte());
 											}
 											else
 											{
-												bool flag18 = func(RawHeader.Char);
+												var flag18 = func(RawHeader.Char);
 												if (flag18)
 												{
-													this.print(depth, string.Concat(new string[]
-													{
-														"CHAR",
-														FieldSizeStr,
-														"   '",
-														this.buffer.Char(FieldSize).ToString(),
-														"'"
-													}));
+													print(depth, string.Concat("CHAR", FieldSizeStr, "   '", buffer.Char(FieldSize).ToString(), "'"));
 												}
 												else
 												{
-													bool flag19 = func(RawHeader.Int16);
+													var flag19 = func(RawHeader.Int16);
 													if (flag19)
 													{
-														this.print(depth, string.Concat(new object[]
-														{
-															"INT16",
-															FieldSizeStr,
-															"  ",
-															this.buffer.Int16(FieldSize)
-														}));
+														print(depth, string.Concat("INT16", FieldSizeStr, "  ", buffer.Int16(FieldSize)));
 													}
 													else
 													{
-														bool flag20 = func(RawHeader.UInt16);
+														var flag20 = func(RawHeader.UInt16);
 														if (flag20)
 														{
-															this.print(depth, string.Concat(new object[]
-															{
-																"UINT16",
-																FieldSizeStr,
-																" ",
-																this.buffer.UInt16(FieldSize)
-															}));
+															print(depth, string.Concat("UINT16", FieldSizeStr, " ", buffer.UInt16(FieldSize)));
 														}
 														else
 														{
-															bool flag21 = func(RawHeader.Int32);
+															var flag21 = func(RawHeader.Int32);
 															if (flag21)
 															{
-																this.print(depth, string.Concat(new object[]
-																{
-																	"INT32",
-																	FieldSizeStr,
-																	"  ",
-																	this.buffer.Int32(FieldSize)
-																}));
+																print(depth, string.Concat("INT32", FieldSizeStr, "  ", buffer.Int32(FieldSize)));
 															}
 															else
 															{
-																bool flag22 = func(RawHeader.UInt32);
+																var flag22 = func(RawHeader.UInt32);
 																if (flag22)
 																{
-																	this.print(depth, string.Concat(new object[]
-																	{
-																		"UINT32",
-																		FieldSizeStr,
-																		" ",
-																		this.buffer.UInt32(FieldSize)
-																	}));
+																	print(depth, string.Concat("UINT32", FieldSizeStr, " ", buffer.UInt32(FieldSize)));
 																}
 																else
 																{
-																	bool flag23 = func(RawHeader.Int64);
+																	var flag23 = func(RawHeader.Int64);
 																	if (flag23)
 																	{
-																		this.print(depth, string.Concat(new object[]
-																		{
-																			"INT64",
-																			FieldSizeStr,
-																			"  ",
-																			this.buffer.Int64(FieldSize)
-																		}));
+																		print(depth, string.Concat("INT64", FieldSizeStr, "  ", buffer.Int64(FieldSize)));
 																	}
 																	else
 																	{
-																		bool flag24 = func(RawHeader.UInt64);
+																		var flag24 = func(RawHeader.UInt64);
 																		if (flag24)
 																		{
-																			this.print(depth, string.Concat(new object[]
-																			{
-																				"UINT64",
-																				FieldSizeStr,
-																				" ",
-																				this.buffer.UInt64(FieldSize)
-																			}));
+																			print(depth, string.Concat("UINT64", FieldSizeStr, " ", buffer.UInt64(FieldSize)));
 																		}
 																		else
 																		{
-																			bool flag25 = func(RawHeader.Single);
+																			var flag25 = func(RawHeader.Single);
 																			if (flag25)
 																			{
-																				this.print(depth, "SINGLE   " + this.buffer.Single());
+																				print(depth, "SINGLE   " + buffer.Single());
 																			}
 																			else
 																			{
-																				bool flag26 = func(RawHeader.Double);
+																				var flag26 = func(RawHeader.Double);
 																				if (flag26)
 																				{
-																					this.print(depth, "DOUBLE   " + this.buffer.Double());
+																					print(depth, "DOUBLE   " + buffer.Double());
 																				}
 																				else
 																				{
-																					bool flag27 = func(RawHeader.Decimal);
+																					var flag27 = func(RawHeader.Decimal);
 																					if (flag27)
 																					{
-																						this.print(depth, "DECIMAL  " + this.buffer.Decimal());
+																						print(depth, "DECIMAL  " + buffer.Decimal());
 																					}
 																					else
 																					{
-																						bool flag28 = func(RawHeader.DateTime);
+																						var flag28 = func(RawHeader.DateTime);
 																						if (flag28)
 																						{
-																							this.print(depth, "DATETIME " + this.buffer.DateTime());
+																							print(depth, "DATETIME " + buffer.DateTime());
 																						}
 																						else
 																						{
-																							bool flag29 = func(RawHeader.Time);
+																							var flag29 = func(RawHeader.Time);
 																							if (flag29)
 																							{
-																								this.print(depth, string.Concat(new object[]
-																								{
-																									"TIME",
-																									FieldSizeStr,
-																									"   ",
-																									this.buffer.Time(FieldSize)
-																								}));
+																								print(depth, string.Concat("TIME", FieldSizeStr, "   ", buffer.Time(FieldSize)));
 																							}
 																							else
 																							{
-																								bool flag30 = func(RawHeader.Guid);
+																								var flag30 = func(RawHeader.Guid);
 																								if (flag30)
 																								{
-																									this.print(depth, "GUID     " + this.buffer.Guid());
+																									print(depth, "GUID     " + buffer.Guid());
 																								}
 																								else
 																								{
-																									bool flag31 = func(RawHeader.String);
+																									var flag31 = func(RawHeader.String);
 																									if (flag31)
 																									{
-																										this.print(depth, string.Concat(new string[]
-																										{
-																											"STRING",
-																											FieldSizeStr,
-																											" \"",
-																											this.buffer.String(FieldSize),
-																											"\""
-																										}));
+																										print(depth, string.Concat("STRING", FieldSizeStr, " \"", buffer.String(FieldSize), "\""));
 																									}
 																									else
 																									{
-																										bool flag32 = func(RawHeader.ByteArray);
+																										var flag32 = func(RawHeader.ByteArray);
 																										if (!flag32)
 																										{
-																											this.print(depth, "ERROR: UNEXPECTED TYPE HEADER " + this.buffer.NextType());
+																											print(depth, "ERROR: UNEXPECTED TYPE HEADER " + buffer.NextType());
 																											result = false;
 																											return result;
 																										}
-																										byte[] array = this.buffer.Bytes(FieldSize);
-																										object[] expr_782 = new object[5];
+																										var array = buffer.Bytes(FieldSize);
+																										var expr_782 = new object[5];
 																										expr_782[0] = "BYTE[";
 																										expr_782[1] = array.Length;
 																										expr_782[2] = FieldSizeStr;
 																										expr_782[3] = "] ";
-																										int arg_7D9_1 = 4;
-																										string arg_7D4_0 = " ";
+																										var arg_7D9_1 = 4;
+																										var arg_7D4_0 = " ";
 																										expr_782[arg_7D9_1] = string.Join(arg_7D4_0, array.Select(b => b.ToString("X02")));
-																										this.print(depth, string.Concat(expr_782));
+																										print(depth, string.Concat(expr_782));
 																									}
 																								}
 																							}
@@ -1620,7 +1292,7 @@ namespace LaWare.Utility.RawSerializer
 
 		private void print(int depth, string str)
 		{
-			this.Items.Add(new string(' ', 4 * depth) + str);
+			Items.Add(new string(' ', 4 * depth) + str);
 		}
 	}
 }
