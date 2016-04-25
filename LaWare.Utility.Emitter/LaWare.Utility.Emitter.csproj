@@ -16,5 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Emitter.cs" />
+    <Compile Include="OpCodeDump.cs" />
   </ItemGroup>
 </Project>

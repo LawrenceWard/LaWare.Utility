@@ -2,36 +2,26 @@
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
-
+// ReSharper disable UnusedAutoPropertyAccessor.Global
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable once CheckNamespace
 namespace LaWare.Utility.Build
 {
 	public class FilesTaskBase : Task
 	{
 
 		[Required]
-		public ITaskItem[] InputFiles
-		{
-			get;
-			set;
-		}
+		public ITaskItem[] InputFiles { get; set; }
 
 		[Output]
-		public ITaskItem[] OutputFiles
-		{
-			get;
-			set;
-		}
+		public ITaskItem[] OutputFiles { get; set; }
 
 		public override bool Execute()
 		{
+			// ReSharper disable once CoVariantArrayConversion
 			OutputFiles = InputFiles.Select(item => new TaskItem(item.ItemSpec)).ToArray();
 			return true;
 		}
@@ -39,29 +29,16 @@ namespace LaWare.Utility.Build
 	public class RegexUpdateFile : Task
 	{
 		[Required]
-		public ITaskItem[] Files
-		{
-			get;
-			set;
-		}
+		public ITaskItem[] Files { get; set; }
 
 		[Required]
-		public string Regex
-		{
-			get;
-			set;
-		}
+		public string Regex { get; set; }
 
 		[Required]
-		public string ReplacementText
-		{
-			get;
-			set;
-		}
+		public string ReplacementText { get; set; }
 
 		public override bool Execute()
 		{
-			bool result;
 			try
 			{
 				var regex = new Regex(Regex);
@@ -75,14 +52,13 @@ namespace LaWare.Utility.Build
 					File.WriteAllText(metadata, text);
 					Log.LogMessage("RegexUpdateFile: " + metadata);
 				}
-				result = true;
+				return true;
 			}
 			catch (Exception exception)
 			{
 				Log.LogErrorFromException(exception);
-				result = false;
+				return false;
 			}
-			return result;
 		}
 	}
 }
