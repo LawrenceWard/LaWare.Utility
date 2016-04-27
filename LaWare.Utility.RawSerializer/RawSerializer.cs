@@ -108,7 +108,7 @@ namespace LaWare.Utility.RawSerializer
 
 		private unsafe void WriteShortI16(short source, RawHeader type)
 		{
-			if (source <= 127 && source >= -128)
+			if (source <= SByte.MaxValue && source >= SByte.MinValue)
 			{
 				Type(type | RawHeader.Size1);
 				WriteRawBytes(&source, 1);
@@ -122,7 +122,7 @@ namespace LaWare.Utility.RawSerializer
 
 		private unsafe void WriteShortU16(ushort source, RawHeader type)
 		{
-			if (source <= 255)
+			if (source <= Byte.MaxValue)
 			{
 				Type(type | RawHeader.Size1);
 				WriteRawBytes(&source, 1);
@@ -136,17 +136,17 @@ namespace LaWare.Utility.RawSerializer
 
 		private unsafe void WriteShortI32(int source, RawHeader type)
 		{
-			if (source <= 127 && source >= -128)
+			if (source <= SByte.MaxValue && source >= SByte.MinValue)
 			{
 				Type(type | RawHeader.Size1);
 				WriteRawBytes(&source, 1);
 			}
-			else if (source <= 32767 && source >= -32768)
+			else if (source <= Int16.MaxValue && source >= Int16.MinValue)
 			{
 				Type(type | RawHeader.Size2);
 				WriteRawBytes(&source, 2);
 			}
-			else if (source <= 8388352 && source >= -8388608)
+			else if (source <= Int24_MaxValue && source >= Int24_MinValue)
 			{
 				Type(type | RawHeader.Size3);
 				WriteRawBytes(&source, 3);
@@ -160,17 +160,17 @@ namespace LaWare.Utility.RawSerializer
 
 		private unsafe void WriteShortU32(uint source, RawHeader type)
 		{
-			if (source <= 255u)
+			if (source <= Byte.MaxValue)
 			{
 				Type(type | RawHeader.Size1);
 				WriteRawBytes(&source, 1);
 			}
-			else if (source <= 65535u)
+			else if (source <= UInt16.MaxValue)
 			{
 				Type(type | RawHeader.Size2);
 				WriteRawBytes(&source, 2);
 			}
-			else if (source <= 16776960u)
+			else if (source <= UInt24_MaxValue)
 			{
 				Type(type | RawHeader.Size3);
 				WriteRawBytes(&source, 3);
@@ -184,39 +184,39 @@ namespace LaWare.Utility.RawSerializer
 
 		private unsafe void WriteShortI64(long source, RawHeader type)
 		{
-			if (source <= 127L && source >= -128L)
+			if (source <= SByte.MaxValue && source >= SByte.MinValue)
 			{
 				Type(type | RawHeader.Size1);
 				WriteRawBytes(&source, 1);
 			}
-			else if (source <= 32767L && source >= -32768L)
+			else if (source <= Int16.MaxValue && source >= Int16.MinValue)
 			{
 				Type(type | RawHeader.Size2);
 				WriteRawBytes(&source, 2);
 			}
-			else if (source <= 8388352L && source >= -8388608L)
+			else if (source <= Int24_MaxValue && source >= Int24_MinValue)
 			{
 				Type(type | RawHeader.Size3);
 				WriteRawBytes(&source, 3);
 			}
-			else if (source <= 2147483647L && source >= -2147483648L)
+			else if (source <= Int32.MaxValue && source >= Int32.MinValue)
 			{
 				Type(type | RawHeader.Size4);
 				WriteRawBytes(&source, 4);
 			}
-			else if (source <= 549755813632L && source >= -549755813888L)
+			else if (source <= Int40_MaxValue && source >= Int40_MinValue)
 			{
 				Type(type | RawHeader.Size5);
 				WriteRawBytes(&source, 5);
 			}
-			else if (source <= 140737488289792L && source >= -140737488355328L)
+			else if (source <= Int48_MaxValue && source >= Int48_MinValue)
 			{
 				Type(type | RawHeader.Size6);
 				WriteRawBytes(&source, 6);
 			}
-			else if (source <= 36028797002186752L && source >= -36028797018963968L)
+			else if (source <= Int56_MaxValue && source >= Int56_MinValue)
 			{
-				Type(type | RawHeader.SizeMask);
+				Type(type | RawHeader.Size7);
 				WriteRawBytes(&source, 7);
 			}
 			else
@@ -228,39 +228,39 @@ namespace LaWare.Utility.RawSerializer
 
 		private unsafe void WriteShortU64(ulong source, RawHeader type)
 		{
-			if (source <= 255uL)
+			if (source <= Byte.MaxValue)
 			{
 				Type(type | RawHeader.Size1);
 				WriteRawBytes(&source, 1);
 			}
-			else if (source <= 65535uL)
+			else if (source <= UInt16.MaxValue)
 			{
 				Type(type | RawHeader.Size2);
 				WriteRawBytes(&source, 2);
 			}
-			else if (source <= 16776960uL)
+			else if (source <= UInt24_MaxValue)
 			{
 				Type(type | RawHeader.Size3);
 				WriteRawBytes(&source, 3);
 			}
-			else if (source <= 4294901760uL)
+			else if (source <= UInt32.MaxValue)
 			{
 				Type(type | RawHeader.Size4);
 				WriteRawBytes(&source, 4);
 			}
-			else if (source <= 1099511627520uL)
+			else if (source <= UInt40_MaxValue)
 			{
 				Type(type | RawHeader.Size5);
 				WriteRawBytes(&source, 5);
 			}
-			else if (source <= 281474976645120uL)
+			else if (source <= UInt48_MaxValue)
 			{
 				Type(type | RawHeader.Size6);
 				WriteRawBytes(&source, 6);
 			}
-			else if (source <= 72057594021150720uL)
+			else if (source <= UInt56_MaxValue)
 			{
-				Type(type | RawHeader.SizeMask);
+				Type(type | RawHeader.Size7);
 				WriteRawBytes(&source, 7);
 			}
 			else
